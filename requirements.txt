@@ -1,0 +1,7 @@
+flask>=3.0.0
+opencv-python>=4.9.0
+numpy>=1.26.0
+pillow>=10.2.0
+matplotlib>=3.8.0
+scikit-image>=0.22.0
+flask-cors>=4.0.0
