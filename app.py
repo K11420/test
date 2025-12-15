@@ -2766,7 +2766,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='高速CV経路検出システム - Python版（フロアマップ対応）')
-    parser.add_argument('--host', default='127.0.0.1', help='ホストアドレス（デフォルト: 127.0.0.1）')
+    parser.add_argument('--host', default='0.0.0.0', help='ホストアドレス（デフォルト: 0.0.0.0）')
     parser.add_argument('--port', type=int, default=5000, help='ポート番号（デフォルト: 5000）')
     parser.add_argument('--debug', action='store_true', help='デバッグモードで実行')
     
