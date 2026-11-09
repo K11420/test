@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 高速CV経路検出システム - Python版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .algorithm-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .algorithm-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .algorithm-card.selected {
+            border: 2px solid #4f46e5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .performance-meter {
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            background: #e5e7eb;
+        }
+        
+        .performance-bar {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen text-gray-800">
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <div class="text-center mb-8 fade-in">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-route mr-3 text-blue-600"></i>
+                高速CV経路検出システム - Python版
+            </h1>
+            <p class="text-lg text-gray-600 mb-2">高度な二値化処理とリアルタイム経路探索</p>
+            <div class="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                <i class="fas fa-python mr-2"></i>
+                Python + OpenCV + Flask
+            </div>
+        </div>
+
+        <!-- 画像アップロード -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-upload mr-2 text-blue-600"></i>
+                1. 画像アップロード
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        フロアマップ画像を選択
+                    </label>
+                    <input type="file" id="imageInput" accept="image/*" 
+                           class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+                <div class="flex items-end">
+                    <button id="processBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400" disabled>
+                        <i class="fas fa-cogs mr-2"></i>
+                        画像を処理
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 二値化設定 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-adjust mr-2 text-green-600"></i>
+                2. 高度な二値化処理設定
+            </h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">二値化方法</label>
+                    <select id="binarizationMode" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="otsu">Otsu法（自動閾値）</option>
+                        <option value="simple">単純閾値</option>
+                        <option value="adaptive_mean">適応的閾値（平均）</option>
+                        <option value="adaptive_gaussian">適応的閾値（ガウシアン）</option>
+                        <option value="multi_level">マルチレベル閾値</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        閾値: <span id="thresholdValue">127</span>
+                    </label>
+                    <input type="range" id="thresholdSlider" min="0" max="255" value="127" 
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        適応ブロックサイズ: <span id="blockSizeValue">15</span>
+                    </label>
+                    <input type="range" id="blockSizeSlider" min="3" max="31" step="2" value="15" 
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        適応定数C: <span id="adaptiveCValue">5</span>
+                    </label>
+                    <input type="range" id="adaptiveCSlider" min="0" max="20" value="5" 
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="noiseReduction" checked class="mr-2">
+                        <span class="text-sm font-medium text-gray-700">ノイズ除去</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        カーネルサイズ: <span id="kernelSizeValue">3</span>
+                    </label>
+                    <input type="range" id="kernelSizeSlider" min="3" max="15" step="2" value="3" 
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+        </div>
+
+        <!-- アルゴリズム選択 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-route mr-2 text-purple-600"></i>
+                3. 経路探索アルゴリズム選択
+            </h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="algorithm-card bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border-2 border-green-200" data-algorithm="BFS">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-green-800">BFS</h3>
+                        <span class="text-xs bg-green-500 text-white px-2 py-1 rounded-full">最高速</span>
+                    </div>
+                    <p class="text-sm text-green-700 mb-2">幅優先探索 - 最短経路保証</p>
+                    <div class="performance-meter">
+                        <div class="performance-bar bg-green-500" style="width: 95%"></div>
+                    </div>
+                </div>
+                <div class="algorithm-card bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border-2 border-blue-200" data-algorithm="A*">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-blue-800">A*</h3>
+                        <span class="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">高速</span>
+                    </div>
+                    <p class="text-sm text-blue-700 mb-2">ヒューリスティック探索</p>
+                    <div class="performance-meter">
+                        <div class="performance-bar bg-blue-500" style="width: 80%"></div>
+                    </div>
+                </div>
+                <div class="algorithm-card bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border-2 border-purple-200" data-algorithm="Dijkstra">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-bold text-purple-800">Dijkstra</h3>
+                        <span class="text-xs bg-purple-500 text-white px-2 py-1 rounded-full">標準</span>
+                    </div>
+                    <p class="text-sm text-purple-700 mb-2">重み付き最短経路</p>
+                    <div class="performance-meter">
+                        <div class="performance-bar bg-purple-500" style="width: 60%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 点設定と実行 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-map-marked-alt mr-2 text-red-600"></i>
+                4. 経路設定と実行
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600 mb-2">画像をクリックして開始点と終了点を設定してください</p>
+                        <div class="flex gap-4">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
+                                <span class="text-sm">開始点: <span id="startStatus" class="font-mono">未設定</span></span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
+                                <span class="text-sm">終了点: <span id="endStatus" class="font-mono">未設定</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-end gap-2">
+                    <button id="findPathBtn" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400" disabled>
+                        <i class="fas fa-search mr-2"></i>
+                        経路検索実行
+                    </button>
+                    <button id="clearPathBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-eraser mr-2"></i>
+                        クリア
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 結果表示エリア -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-image mr-2 text-indigo-600"></i>
+                処理結果
+            </h2>
+            <div class="grid lg:grid-cols-2 gap-6">
+                <!-- 元画像 -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">元画像</h3>
+                    <div id="originalImageContainer" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500 min-h-[300px] flex items-center justify-center">
+                        画像を選択してください
+                    </div>
+                </div>
+                <!-- 処理後画像 -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">処理後画像（経路表示）</h3>
+                    <div id="processedImageContainer" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500 min-h-[300px] flex items-center justify-center">
+                        処理を実行してください
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 結果情報 -->
+            <div id="resultInfo" class="mt-6 p-4 bg-gray-50 rounded-lg hidden">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">処理結果</h3>
+                <div class="grid md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <strong>アルゴリズム:</strong> <span id="usedAlgorithm">-</span>
+                    </div>
+                    <div>
+                        <strong>処理時間:</strong> <span id="processingTime">-</span>ms
+                    </div>
+                    <div>
+                        <strong>経路長:</strong> <span id="pathLength">-</span>ステップ
+                    </div>
+                    <div>
+                        <strong>自動閾値:</strong> <span id="autoThreshold">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- パフォーマンス情報 -->
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow-lg p-6 fade-in">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-tachometer-alt mr-2 text-blue-600"></i>
+                Python版の特徴
+            </h3>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-semibold text-gray-700 mb-2">🔬 高度な二値化処理</h4>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• <strong>Otsu法</strong>: 自動閾値決定</li>
+                        <li>• <strong>適応的閾値</strong>: ローカル統計ベース</li>
+                        <li>• <strong>マルチレベル</strong>: 段階的処理</li>
+                        <li>• <strong>ノイズ除去</strong>: モルフォロジー演算</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-700 mb-2">⚡ 最適化されたアルゴリズム</h4>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• <strong>BFS</strong>: グリッドベース最適化</li>
+                        <li>• <strong>A*</strong>: ヒューリスティック改善</li>
+                        <li>• <strong>Dijkstra</strong>: 重み付き対応</li>
+                        <li>• <strong>Python+OpenCV</strong>: 高速画像処理</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ローディング -->
+        <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                <div class="loader mx-auto mb-4"></div>
+                <p id="loadingText" class="text-gray-700 font-medium">処理中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script src="{{ url_for('static_files', filename='app.js') }}"></script>
+</body>
+
+</html>
